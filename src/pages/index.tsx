@@ -33,7 +33,8 @@ const Index = () => {
   
   // Initialize Telegram WebApp
   useEffect(() => {
-    initTelegramWebApp();
+    const webApp = initTelegramWebApp();
+    console.log("Telegram WebApp initialized:", webApp);
   }, []);
   
   // Load game data when user is loaded
