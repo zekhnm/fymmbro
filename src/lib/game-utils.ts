@@ -78,16 +78,30 @@ export async function getRandomCountries(count: number = 3): Promise<Schema["cou
 
 // Record a guess
 export async function recordGuess(userId: number): Promise<void> {
+  // Get current user
+  const users = await fine.table("users").select().eq("id", userId);
+  if (!users || users.length === 0) return;
+  
+  const user = users[0];
+  const newCount = (user.dailyGuessCount || 0) + 1;
+  
   await fine.table("users").update({
     lastGuessTime: new Date().toISOString(),
-    dailyGuessCount: fine.raw("dailyGuessCount + 1")
+    dailyGuessCount: newCount
   }).eq("id", userId);
 }
 
 // Award user for correct guess
 export async function awardCorrectGuess(userId: number): Promise<void> {
+  // Get current user
+  const users = await fine.table("users").select().eq("id", userId);
+  if (!users || users.length === 0) return;
+  
+  const user = users[0];
+  const newBalance = (user.balance || 0) + CORRECT_GUESS_REWARD;
+  
   await fine.table("users").update({
-    balance: fine.raw(`balance + ${CORRECT_GUESS_REWARD}`)
+    balance: newBalance
   }).eq("id", userId);
 }
 
@@ -100,10 +114,18 @@ export async function processReferral(referrerId: number, referredId: number): P
     rewarded: true
   });
   
+  // Get current user
+  const users = await fine.table("users").select().eq("id", referrerId);
+  if (!users || users.length === 0) return;
+  
+  const user = users[0];
+  const newBalance = (user.balance || 0) + REFERRAL_REWARD;
+  const newInviteCount = (user.inviteCount || 0) + 1;
+  
   // Update inviter's balance and invite count
   await fine.table("users").update({
-    balance: fine.raw(`balance + ${REFERRAL_REWARD}`),
-    inviteCount: fine.raw("inviteCount + 1")
+    balance: newBalance,
+    inviteCount: newInviteCount
   }).eq("id", referrerId);
 }
 

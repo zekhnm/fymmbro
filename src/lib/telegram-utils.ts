@@ -1,14 +1,11 @@
 // Function to initialize Telegram WebApp
 export function initTelegramWebApp() {
   // Check if Telegram WebApp is available
-  if (window.Telegram && window.Telegram.WebApp) {
+  if (typeof window !== 'undefined' && 'Telegram' in window && window.Telegram?.WebApp) {
     const webApp = window.Telegram.WebApp;
     
     // Expand the WebApp to fullscreen
     webApp.expand();
-    
-    // Enable closing confirmation if needed
-    // webApp.enableClosingConfirmation();
     
     // Set the header color
     webApp.setHeaderColor('#FF5722');
@@ -24,7 +21,7 @@ export function initTelegramWebApp() {
 
 // Get user data from Telegram WebApp
 export function getTelegramUser() {
-  if (window.Telegram && window.Telegram.WebApp) {
+  if (typeof window !== 'undefined' && 'Telegram' in window && window.Telegram?.WebApp) {
     const webApp = window.Telegram.WebApp;
     
     // Check if initDataUnsafe is available and has user data
@@ -72,17 +69,37 @@ export async function postToChannel(channelId: string, message: string) {
 
 // Create shareable invite link
 export function createInviteLink(referrerId: string) {
-  if (window.Telegram && window.Telegram.WebApp) {
-    const botUsername = 'itGuessBot'; // Your bot username
-    return `https://t.me/${botUsername}?start=ref_${referrerId}`;
-  }
-  
-  return null;
+  const botUsername = 'itGuessBot'; // Your bot username
+  return `https://t.me/${botUsername}?start=ref_${referrerId}`;
 }
 
 // Share invite link via Telegram
 export function shareInviteLink(inviteLink: string, text: string) {
-  if (window.Telegram && window.Telegram.WebApp) {
+  if (typeof window !== 'undefined' && 'Telegram' in window && window.Telegram?.WebApp) {
     window.Telegram.WebApp.switchInlineQuery(text, ['users', 'groups']);
+  }
+}
+
+// Add Telegram WebApp types
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp: {
+        expand: () => void;
+        enableClosingConfirmation: () => void;
+        setHeaderColor: (color: string) => void;
+        setBackgroundColor: (color: string) => void;
+        initDataUnsafe: {
+          user?: {
+            id: string;
+            first_name: string;
+            last_name?: string;
+            username?: string;
+            language_code: string;
+          };
+        };
+        switchInlineQuery: (text: string, targets: string[]) => void;
+      };
+    };
   }
 }

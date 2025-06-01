@@ -83,9 +83,18 @@ export const WithdrawalForm: React.FC = () => {
         gcashNumber
       });
       
+      // Get current user balance
+      const users = await fine.table("users").select().eq("id", user.id);
+      if (!users || users.length === 0) {
+        throw new Error("User not found");
+      }
+      
+      const currentUser = users[0];
+      const newBalance = (currentUser.balance || 0) - amountInCentavos;
+      
       // Update user balance
       await fine.table("users").update({
-        balance: fine.raw(`balance - ${amountInCentavos}`)
+        balance: newBalance
       }).eq("id", user.id);
       
       // Refresh user data
