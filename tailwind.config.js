@@ -60,7 +60,17 @@ export default {
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
   			}
-  		}
+  		},
+      animation: {
+        loading: 'loading 1.5s ease-in-out infinite',
+      },
+      keyframes: {
+        loading: {
+          '0%': { width: '0%', marginLeft: '0%' },
+          '50%': { width: '100%', marginLeft: '0%' },
+          '100%': { width: '0%', marginLeft: '100%' },
+        },
+      },
   	}
   },
   plugins: [require("tailwindcss-animate")],

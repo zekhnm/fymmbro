@@ -9,27 +9,37 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { TooltipProvider } from "./components/ui/tooltip";
 
 import { ThemeProvider } from "./components/layout/theme-provider";
+import { UserProvider } from "./contexts/UserContext";
 import "./index.css";
 import Index from "./pages";
 import LoginForm from "./pages/login";
 import SignupForm from "./pages/signup";
 import Logout from "./pages/logout";
+import Wallet from "./pages/wallet";
+import Referrals from "./pages/referrals";
+import FAQ from "./pages/faq";
+
 const queryClient = new QueryClient();
 
 createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <ThemeProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path='/' element={<Index />} />
-            <Route path='/login' element={<LoginForm />} />
-            <Route path='/signup' element={<SignupForm />} />
-            <Route path='/logout' element={<Logout />} />
-          </Routes>
-        </BrowserRouter>
-        <Sonner />
-        <Toaster />
+        <UserProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path='/' element={<Index />} />
+              <Route path='/wallet' element={<Wallet />} />
+              <Route path='/referrals' element={<Referrals />} />
+              <Route path='/faq' element={<FAQ />} />
+              <Route path='/login' element={<LoginForm />} />
+              <Route path='/signup' element={<SignupForm />} />
+              <Route path='/logout' element={<Logout />} />
+            </Routes>
+          </BrowserRouter>
+          <Sonner />
+          <Toaster />
+        </UserProvider>
       </ThemeProvider>
     </TooltipProvider>
   </QueryClientProvider>
