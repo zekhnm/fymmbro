@@ -44,26 +44,55 @@ export function getTelegramUser() {
   return null;
 }
 
-// Post message to Telegram channel
-export async function postToChannel(channelId: string, message: string) {
-  try {
-    const response = await fetch(`https://api.telegram.org/bot${import.meta.env.VITE_TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        chat_id: channelId,
-        text: message,
-        parse_mode: 'HTML'
-      })
-    });
-    
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error posting to channel:', error);
-    throw error;
+// Post message to Telegram channel with retry mechanism
+export async function postToChannel(channelId: string, message: string, retries = 2): Promise<void> {
+  // Validate inputs
+  if (!channelId || !channelId.startsWith('-100')) {
+    console.error('Invalid channel ID:', channelId);
+    throw new Error('Invalid Telegram channel ID');
+  }
+
+  const botToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
+  if (!botToken) {
+    console.error('Telegram bot token is not configured');
+    throw new Error('Telegram bot token is not configured');
+  }
+
+  // Format message for Markdown (safer than HTML)
+  const formattedMessage = message.replace(/✨|💰|🕹️|⚡/g, '*'); // Replace emojis with Markdown-safe characters
+
+  for (let attempt = 1; attempt <= retries + 1; attempt++) {
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: channelId,
+          text: formattedMessage,
+          parse_mode: 'Markdown'
+        })
+      });
+
+      const data = await response.json();
+
+      if (!data.ok) {
+        console.error(`Telegram API error (attempt ${attempt}):`, data);
+        throw new Error(`Telegram API error: ${data.description || 'Unknown error'}`);
+      }
+
+      console.log('Message posted to channel successfully:', data);
+      return;
+    } catch (error) {
+      console.error(`Error posting to channel (attempt ${attempt}):`, error);
+      if (attempt <= retries) {
+        // Wait before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        continue;
+      }
+      throw error; // Rethrow after final attempt
+    }
   }
 }
 
