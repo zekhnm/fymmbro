@@ -7,18 +7,18 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { fine } from '@/lib/fine';
 import { formatPeso, MIN_WITHDRAWAL, MAX_WITHDRAWAL } from '@/lib/game-utils';
-import { postToChannel } from '@/lib/telegram-utils';
+// Removed postToChannel import because we'll do it in backend
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
 
 export const WithdrawalForm: React.FC = () => {
   const { user, refreshUser } = useUser();
   const { toast } = useToast();
-  const [amount, setAmount] = useState<number>(MIN_WITHDRAWAL / 100); // Convert to pesos for input
+  const [amount, setAmount] = useState<number>(MIN_WITHDRAWAL / 100);
   const [gcashNumber, setGcashNumber] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState<boolean>(false);
-  
+
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
     if (!isNaN(value)) {
@@ -27,13 +27,12 @@ export const WithdrawalForm: React.FC = () => {
       setAmount(0);
     }
   };
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Convert pesos to centavos for processing
+
     const amountInCentavos = Math.round(amount * 100);
-    
+
     // Validate amount
     if (amountInCentavos < MIN_WITHDRAWAL) {
       toast({
@@ -43,7 +42,7 @@ export const WithdrawalForm: React.FC = () => {
       });
       return;
     }
-    
+
     if (amountInCentavos > MAX_WITHDRAWAL) {
       toast({
         title: "Invalid amount",
@@ -52,7 +51,7 @@ export const WithdrawalForm: React.FC = () => {
       });
       return;
     }
-    
+
     // Validate GCash number
     if (!gcashNumber || gcashNumber.length < 10) {
       toast({
@@ -62,7 +61,7 @@ export const WithdrawalForm: React.FC = () => {
       });
       return;
     }
-    
+
     // Check if user has enough balance
     if (!user || (user.balance || 0) < amountInCentavos) {
       toast({
@@ -72,48 +71,32 @@ export const WithdrawalForm: React.FC = () => {
       });
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
-      // Create withdrawal record
-      await fine.table("withdrawals").insert({
-        userId: user.id!,
-        amount: amountInCentavos,
-        gcashNumber
+      // Call backend API instead of doing fine DB and Telegram here
+      const response = await fetch('/api/withdraw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          amountInCentavos,
+          gcashNumber,
+        }),
       });
-      
-      // Get current user balance
-      const users = await fine.table("users").select().eq("id", user.id);
-      if (!users || users.length === 0) {
-        throw new Error("User not found");
+
+      const data = await response.json();
+
+      if (!response.ok || data.error) {
+        throw new Error(data.error || 'Withdrawal failed');
       }
-      
-      const currentUser = users[0];
-      const newBalance = (currentUser.balance || 0) - amountInCentavos;
-      
-      // Update user balance
-      await fine.table("users").update({
-        balance: newBalance
-      }).eq("id", user.id);
-      
-      // Refresh user data
+
+      // Refresh user data after withdrawal
       await refreshUser();
-      
-      // Post to Telegram channel
-      try {
-        await postToChannel(
-          "-1002592525628", 
-          `✨ New withdrawal success\n\n💰 Amount Withdrawn: ${formatPeso(amountInCentavos)}\n\n🕹️ Via: GCash\n\n⚡ @itGuessBot`
-        );
-      } catch (error) {
-        console.error("Error posting to channel:", error);
-        // Don't fail the withdrawal if posting to channel fails
-      }
-      
-      // Show success dialog
+
       setShowSuccessDialog(true);
-      
+
       // Reset form
       setAmount(MIN_WITHDRAWAL / 100);
       setGcashNumber('');
@@ -121,25 +104,25 @@ export const WithdrawalForm: React.FC = () => {
       console.error("Withdrawal error:", error);
       toast({
         title: "Withdrawal failed",
-        description: "An error occurred while processing your withdrawal",
+        description: error instanceof Error ? error.message : "An error occurred while processing your withdrawal",
         variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const handleCloseDialog = () => {
     setShowSuccessDialog(false);
   };
-  
+
   const handleJoinChannel = () => {
     window.open('https://t.me/itGuess', '_blank');
     setShowSuccessDialog(false);
   };
-  
+
   const canWithdraw = user && (user.balance || 0) >= MIN_WITHDRAWAL;
-  
+
   return (
     <>
       <Card className="w-full">
@@ -164,7 +147,7 @@ export const WithdrawalForm: React.FC = () => {
                 disabled={isLoading || !canWithdraw}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="gcash">GCash Number</Label>
               <Input
@@ -176,10 +159,10 @@ export const WithdrawalForm: React.FC = () => {
                 disabled={isLoading || !canWithdraw}
               />
             </div>
-            
-            <Button 
-              type="submit" 
-              className="w-full" 
+
+            <Button
+              type="submit"
+              className="w-full"
               disabled={isLoading || !canWithdraw}
             >
               {isLoading ? (
@@ -191,7 +174,7 @@ export const WithdrawalForm: React.FC = () => {
                 "Withdraw"
               )}
             </Button>
-            
+
             {!canWithdraw && (
               <p className="text-sm text-center text-muted-foreground">
                 You need at least {formatPeso(MIN_WITHDRAWAL)} to withdraw
@@ -200,7 +183,7 @@ export const WithdrawalForm: React.FC = () => {
           </form>
         </CardContent>
       </Card>
-      
+
       <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
         <DialogContent>
           <DialogHeader>
